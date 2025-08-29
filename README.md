@@ -1,6 +1,3 @@
-> [!CAUTION]
-> This project hasn't been updated to the latest pterodactyl version yet, please avoid using it until we have time to merge upstream, this version has a vulnerability scored as 10.0/10.0 CVE, use it as your own risk!
-
 # Nook Theme
 NookTheme is a free and open source [Pterodactyl theme](https://pterodactyl.io) designed to be simple, clean, and modern.
 
@@ -90,9 +87,12 @@ chmod -R 755 storage/* bootstrap/cache
 
 After you've downloaded all of the new files you will need to upgrade the core components of the panel. To do this,
 simply run the commands below and follow any prompts.
-
+use nodejs 16
 ```bash
 composer install --no-dev --optimize-autoloader
+
+yarn
+yarn build:production 
 ```
 
 ### Clear Compiled Template Cache
