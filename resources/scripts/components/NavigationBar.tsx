@@ -48,6 +48,29 @@ export default () => {
     const [showSidebar, setShowSidebar] = useState(false);
 
     useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const sidebar = document.getElementById('sidebar');
+            const navButton = document.querySelector('.navbar-button');
+
+            if (sidebar && sidebar.classList.contains('active-nav')) {
+                if (
+                    !sidebar.contains(event.target as Node) &&
+                    navButton &&
+                    !navButton.contains(event.target as Node)
+                ) {
+                    sidebar.classList.remove('active-nav');
+                }
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    useEffect(() => {
         if (location.pathname.startsWith('/server') || location.pathname.startsWith('/account')) {
             setShowSidebar(true);
             return;
