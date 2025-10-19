@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHdd, faMemory, faMicrochip, faServer } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
@@ -9,7 +9,6 @@ import tw from 'twin.macro';
 import isEqual from 'react-fast-compare';
 import Spinner from '@/components/elements/Spinner';
 
-// Komponen Stat (Info Teks)
 const Stat = memo(({ icon, usage, label }: { icon: any; usage: string; label: string }) => (
     <div>
         <div css={tw`flex items-center text-sm text-neutral-200`}>
@@ -20,7 +19,6 @@ const Stat = memo(({ icon, usage, label }: { icon: any; usage: string; label: st
     </div>
 ), isEqual);
 
-// Komponen Progress Bar dengan Gradien
 const ProgressBar = memo(({ usage, limit }: { usage: number; limit: number }) => {
     const percent = limit > 0 ? Math.min((usage / limit) * 100, 100) : 0;
     const isAlarm = percent >= 90;
@@ -42,7 +40,7 @@ const ProgressBar = memo(({ usage, limit }: { usage: number; limit: number }) =>
 
 type Timer = ReturnType<typeof setInterval>;
 
-export default ({ server, className }: { server: Server, className?: string }) => {
+const ServerRow = ({ server, className }: { server: Server, className?: string }) => {
     const [stats, setStats] = useState<ServerStats | null>(null);
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
 
@@ -53,7 +51,10 @@ export default ({ server, className }: { server: Server, className?: string }) =
         const getStats = () => {
             getServerResourceUsage(server.uuid)
                 .then(data => setStats(data))
-                .catch(error => console.error(error));
+                .catch(error => {
+                    console.error(error);
+                    setStats(null);
+                });
         };
         getStats();
         interval.current = setInterval(getStats, 30000);
@@ -62,14 +63,23 @@ export default ({ server, className }: { server: Server, className?: string }) =
         };
     }, [server.uuid, server.status, server.isTransferring]);
 
-    const memoryUsed = bytesToString(stats?.memoryUsageInBytes ?? 0);
-    const memoryLimit = server.limits.memory === 0 ? 'Unlimited' : bytesToString(mbToBytes(server.limits.memory));
-    const diskUsed = bytesToString(stats?.diskUsageInBytes ?? 0);
-    const diskLimit = server.limits.disk === 0 ? 'Unlimited' : bytesToString(mbToBytes(server.limits.disk));
-    const cpuUsage = stats?.cpuUsagePercent.toFixed(2) ?? '0.00';
-    const cpuLimit = server.limits.cpu > 0 ? `/ ${server.limits.cpu}%` : '∞';
-    const isSuspended = server.status === 'suspended' || stats?.isSuspended;
-    const status = isSuspended ? 'suspended' : (stats?.status || server.status);
+    const { memoryUsed, memoryLimit } = useMemo(() => ({
+        memoryUsed: bytesToString(stats?.memoryUsageInBytes ?? 0),
+        memoryLimit: server.limits.memory === 0 ? 'Unlimited' : bytesToString(mbToBytes(server.limits.memory)),
+    }), [stats?.memoryUsageInBytes, server.limits.memory]);
+
+    const { diskUsed, diskLimit } = useMemo(() => ({
+        diskUsed: bytesToString(stats?.diskUsageInBytes ?? 0),
+        diskLimit: server.limits.disk === 0 ? 'Unlimited' : bytesToString(mbToBytes(server.limits.disk)),
+    }), [stats?.diskUsageInBytes, server.limits.disk]);
+
+    const { cpuUsage, cpuLimit } = useMemo(() => ({
+        cpuUsage: stats?.cpuUsagePercent.toFixed(2) ?? '0.00',
+        cpuLimit: server.limits.cpu > 0 ? `/ ${server.limits.cpu}%` : '∞',
+    }), [stats?.cpuUsagePercent, server.limits.cpu]);
+
+    const isSuspended = useMemo(() => server.status === 'suspended' || stats?.isSuspended, [server.status, stats?.isSuspended]);
+    const status = useMemo(() => isSuspended ? 'suspended' : (stats?.status || server.status), [isSuspended, stats?.status, server.status]);
     const isTransitioning = status === 'starting' || status === 'stopping';
 
     return (
@@ -91,8 +101,7 @@ export default ({ server, className }: { server: Server, className?: string }) =
                         css={[
                             tw`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-neutral-900`,
                             status === 'running' && tw`bg-green-500`,
-                            status === 'offline' && tw`bg-red-500`,
-                            status === 'suspended' && tw`bg-red-500`,
+                            (status === 'offline' || status === 'suspended') && tw`bg-red-500`,
                             isTransitioning && tw`bg-yellow-500 animate-pulse`,
                         ]}
                     />
@@ -134,3 +143,5 @@ export default ({ server, className }: { server: Server, className?: string }) =
         </Link>
     );
 };
+
+export default memo(ServerRow, isEqual);

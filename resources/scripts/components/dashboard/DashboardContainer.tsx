@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Server } from '@/api/server/getServer';
 import getServers from '@/api/getServers';
 import Spinner from '@/components/elements/Spinner';
@@ -20,7 +20,7 @@ import ServerRow from '@/components/dashboard/ServerRow';
 export default () => {
     const { search } = useLocation();
     const defaultPage = Number(new URLSearchParams(search).get('page') || '1');
-    const [page, setPage] = React.useState(!isNaN(defaultPage) && defaultPage > 0 ? defaultPage : 1);
+    const [page, setPage] = useState(!isNaN(defaultPage) && defaultPage > 0 ? defaultPage : 1);
 
     const { clearFlashes, clearAndAddHttpError } = useFlash();
     const uuid = useStoreState((state) => state.user.data!.uuid);
@@ -32,20 +32,19 @@ export default () => {
         () => getServers({ page, type: showOnlyAdmin && rootAdmin ? 'admin' : undefined })
     );
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!servers) return;
         if (servers.pagination.currentPage > 1 && !servers.items.length) {
             setPage(1);
         }
     }, [servers?.pagination.currentPage]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         window.history.replaceState(null, document.title, `/${page <= 1 ? '' : `?page=${page}`}`);
     }, [page]);
 
-    React.useEffect(() => {
-        if (error) clearAndAddHttpError({ key: 'dashboard', error });
-        if (!error) clearFlashes('dashboard');
+    useEffect(() => {
+        error ? clearAndAddHttpError({ key: 'dashboard', error }) : clearFlashes('dashboard');
     }, [error]);
 
     return (
@@ -69,8 +68,8 @@ export default () => {
                     {({ items }) =>
                         items.length > 0 ? (
                             <div css={tw`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4`}>
-                                {items.map((server, index) => (
-                                    <ServerRow key={server.uuid} server={server} className={index > 0 ? 'mt-2' : ''} />
+                                {items.map((server) => (
+                                    <ServerRow key={server.uuid} server={server} />
                                 ))}
                             </div>
                         ) : (
@@ -80,12 +79,14 @@ export default () => {
                                         ? 'There are no other servers to display.'
                                         : 'You dont have any servers yet.'}
                                 </p>
-                                <div css={tw`mt-4 text-center`}>
-                                    <Link to={'/servers/new'} css={tw`text-neutral-200 hover:text-neutral-500`}>
-                                        <FontAwesomeIcon icon={faPlusCircle} css={tw`mr-2`} />
-                                        Create New Server
-                                    </Link>
-                                </div>
+                                {rootAdmin && (
+                                    <div css={tw`mt-4 text-center`}>
+                                        <Link to={'/admin/servers'} css={tw`text-neutral-200 hover:text-neutral-500`}>
+                                            <FontAwesomeIcon icon={faPlusCircle} css={tw`mr-2`} />
+                                            Create New Server
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         )
                     }
